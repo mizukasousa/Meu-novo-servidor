@@ -20,7 +20,9 @@ wss.on("connection", async (socket) => {
 
     console.log("Novo jogador conectado:", uuid);
 
-    // Enviar UUID ao cliente
+    // ===============================
+    // ✅ ENVIAR UUID
+    // ===============================
     socket.send(JSON.stringify({
         cmd: "joined_server",
         content: {
@@ -29,7 +31,9 @@ wss.on("connection", async (socket) => {
         }
     }));
 
-    // Spawn do player local
+    // ===============================
+    // ✅ SPAWN PLAYER LOCAL
+    // ===============================
     socket.send(JSON.stringify({
         cmd: "spawn_local_player",
         content: {
@@ -38,7 +42,9 @@ wss.on("connection", async (socket) => {
         }
     }));
 
-    // Spawn do novo player para os outros
+    // ===============================
+    // ✅ SPAWN NOVO PLAYER PARA OUTROS
+    // ===============================
     wss.clients.forEach((client) => {
         if (client !== socket && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
@@ -51,7 +57,9 @@ wss.on("connection", async (socket) => {
         }
     });
 
-    // Enviar jogadores existentes para o novo cliente
+    // ===============================
+    // ✅ ENVIAR PLAYERS EXISTENTES
+    // ===============================
     socket.send(JSON.stringify({
         cmd: "spawn_network_players",
         content: {
@@ -60,8 +68,11 @@ wss.on("connection", async (socket) => {
         }
     }));
 
-    // RECEBENDO MENSAGENS
-    socket.on("message", (message) => {
+
+    // ===============================
+    // 📩 RECEBENDO MENSAGENS
+    // ===============================
+    socket.on("message", async (message) => {
 
         let data;
 
@@ -77,10 +88,8 @@ wss.on("connection", async (socket) => {
         // ===============================
         if (data.cmd === "position") {
 
-            // Atualiza posição no playerlist
-            playerlist.update(uuid, data.content.x, data.content.y);
+            await playerlist.update(uuid, data.content.x, data.content.y);
 
-            // 🔥 ENVIA TUDO (posição + animação + flip)
             const update = {
                 cmd: "update_position",
                 content: {
@@ -92,10 +101,32 @@ wss.on("connection", async (socket) => {
                 }
             };
 
-            // Envia para todos menos quem enviou
             wss.clients.forEach((client) => {
                 if (client !== socket && client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(update));
+                }
+            });
+        }
+
+        // ===============================
+        // 🔥 TIRO MULTIPLAYER
+        // ===============================
+        if (data.cmd === "shoot") {
+
+            const shoot = {
+                cmd: "shoot",
+                content: {
+                    uuid: uuid,
+                    x: data.content.x,
+                    y: data.content.y,
+                    dir: data.content.dir
+                }
+            };
+
+            // 🔥 ENVIA PARA TODOS
+            wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(shoot));
                 }
             });
         }
@@ -119,6 +150,7 @@ wss.on("connection", async (socket) => {
             });
         }
     });
+
 
     // ===============================
     // ❌ DESCONECTAR
