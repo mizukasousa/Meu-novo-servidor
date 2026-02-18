@@ -37,7 +37,6 @@ wss.on("connection", async (socket) => {
     socket.send(JSON.stringify({
         cmd: "spawn_local_player",
         content: {
-            msg: "Spawning local (you) player!",
             player: newPlayer
         }
     }));
@@ -50,7 +49,6 @@ wss.on("connection", async (socket) => {
             client.send(JSON.stringify({
                 cmd: "spawn_new_player",
                 content: {
-                    msg: "Spawning new network player!",
                     player: newPlayer
                 }
             }));
@@ -63,7 +61,6 @@ wss.on("connection", async (socket) => {
     socket.send(JSON.stringify({
         cmd: "spawn_network_players",
         content: {
-            msg: "Spawning network players!",
             players: await playerlist.getAll()
         }
     }));
@@ -109,7 +106,7 @@ wss.on("connection", async (socket) => {
         }
 
         // ===============================
-        // 🔥 TIRO MULTIPLAYER
+        // 🔫 TIRO MULTIPLAYER
         // ===============================
         if (data.cmd === "shoot") {
 
@@ -123,10 +120,39 @@ wss.on("connection", async (socket) => {
                 }
             };
 
-            // 🔥 ENVIA PARA TODOS
             wss.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(shoot));
+                }
+            });
+        }
+
+        // ===============================
+        // 💥 SISTEMA DE DANO
+        // ===============================
+        if (data.cmd === "hit") {
+
+            const target = data.content.target;
+            const damage = data.content.damage;
+
+            console.log(`💥 ${uuid} acertou ${target} causando ${damage} de dano`);
+
+            // valida se o player existe
+            const playerExists = await playerlist.get(target);
+            if (!playerExists) return;
+
+            const applyDamage = {
+                cmd: "apply_damage",
+                content: {
+                    target: target,
+                    damage: damage
+                }
+            };
+
+            // envia para todos
+            wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(applyDamage));
                 }
             });
         }
@@ -150,7 +176,6 @@ wss.on("connection", async (socket) => {
             });
         }
     });
-
 
     // ===============================
     // ❌ DESCONECTAR
